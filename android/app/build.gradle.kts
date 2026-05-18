@@ -10,12 +10,11 @@ android {
     compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
-        isCoreLibraryDesugaringEnabled = true
-    }
-
+  compileOptions {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+    isCoreLibraryDesugaringEnabled = true
+}
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_11.toString()
     }
