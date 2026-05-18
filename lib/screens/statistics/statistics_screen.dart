@@ -20,7 +20,7 @@ class _StatisticsScreenState extends State<StatisticsScreen>
 
   @override
   void initState() {
-    super.initState();r 
+    super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() {
       setState(() {});
@@ -65,13 +65,16 @@ class _StatisticsScreenState extends State<StatisticsScreen>
               children: [
                 IconButton(
                   onPressed: () => txProvider.changeMonth(userId, -1),
-                  icon: const Icon(Icons.chevron_left_rounded, color: AppTheme.primary),
+                  icon: const Icon(Icons.chevron_left_rounded,
+                      color: AppTheme.primary),
                 ),
                 Text(DateFormatter.formatMonthYear(txProvider.selectedMonth),
-                    style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 15)),
+                    style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w600, fontSize: 15)),
                 IconButton(
                   onPressed: () => txProvider.changeMonth(userId, 1),
-                  icon: const Icon(Icons.chevron_right_rounded, color: AppTheme.primary),
+                  icon: const Icon(Icons.chevron_right_rounded,
+                      color: AppTheme.primary),
                 ),
               ],
             ),
@@ -93,7 +96,8 @@ class _StatisticsScreenState extends State<StatisticsScreen>
 
   Widget _buildContent(TransactionProvider txProvider, String currency,
       String type, String userId) {
-    final total = type == 'expense' ? txProvider.totalExpense : txProvider.totalIncome;
+    final total =
+        type == 'expense' ? txProvider.totalExpense : txProvider.totalIncome;
     final color = type == 'expense' ? AppTheme.expense : AppTheme.income;
 
     return FutureBuilder<List<Map<String, dynamic>>>(
@@ -120,20 +124,26 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                       type == 'expense'
                           ? Icons.arrow_upward_rounded
                           : Icons.arrow_downward_rounded,
-                      color: color, size: 28,
+                      color: color,
+                      size: 28,
                     ),
                     const SizedBox(width: 14),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          type == 'expense' ? 'Total dépenses' : 'Total revenus',
-                          style: GoogleFonts.poppins(fontSize: 12, color: AppTheme.textSecondary),
+                          type == 'expense'
+                              ? 'Total dépenses'
+                              : 'Total revenus',
+                          style: GoogleFonts.poppins(
+                              fontSize: 12, color: AppTheme.textSecondary),
                         ),
                         Text(
                           CurrencyFormatter.format(total, currency),
                           style: GoogleFonts.poppins(
-                              fontSize: 22, fontWeight: FontWeight.w800, color: color),
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              color: color),
                         ),
                       ],
                     ),
@@ -144,7 +154,8 @@ class _StatisticsScreenState extends State<StatisticsScreen>
 
               // Bar chart
               Text('Évolution journalière',
-                  style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700)),
+                  style: GoogleFonts.poppins(
+                      fontSize: 16, fontWeight: FontWeight.w700)),
               const SizedBox(height: 16),
 
               if (data.isEmpty)
@@ -159,10 +170,12 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.bar_chart_rounded, size: 40, color: AppTheme.textHint),
+                        Icon(Icons.bar_chart_rounded,
+                            size: 40, color: AppTheme.textHint),
                         const SizedBox(height: 8),
                         Text('Aucune donnée',
-                            style: GoogleFonts.poppins(color: AppTheme.textHint)),
+                            style:
+                                GoogleFonts.poppins(color: AppTheme.textHint)),
                       ],
                     ),
                   ),
@@ -180,24 +193,30 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                     BarChartData(
                       alignment: BarChartAlignment.spaceAround,
                       maxY: data.fold(0.0, (max, e) {
-                        final v = (e['total'] as num).toDouble();
-                        return v > max ? v : max;
-                      }) * 1.2,
+                            final v = (e['total'] as num).toDouble();
+                            return v > max ? v : max;
+                          }) *
+                          1.2,
                       barTouchData: BarTouchData(
                         touchTooltipData: BarTouchTooltipData(
                           getTooltipItem: (group, groupIndex, rod, rodIndex) {
                             return BarTooltipItem(
                               CurrencyFormatter.format(rod.toY, currency),
-                              GoogleFonts.poppins(color: Colors.white, fontSize: 11,
+                              GoogleFonts.poppins(
+                                  color: Colors.white,
+                                  fontSize: 11,
                                   fontWeight: FontWeight.w600),
                             );
                           },
                         ),
                       ),
                       titlesData: FlTitlesData(
-                        leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        leftTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false)),
+                        rightTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false)),
+                        topTitles: const AxisTitles(
+                            sideTitles: SideTitles(showTitles: false)),
                         bottomTitles: AxisTitles(
                           sideTitles: SideTitles(
                             showTitles: true,
@@ -205,7 +224,8 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                               final idx = val.toInt();
                               if (idx < data.length) {
                                 return Text(data[idx]['day'] ?? '',
-                                    style: GoogleFonts.poppins(fontSize: 9,
+                                    style: GoogleFonts.poppins(
+                                        fontSize: 9,
                                         color: AppTheme.textSecondary));
                               }
                               return const SizedBox();
@@ -231,9 +251,10 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                               backDrawRodData: BackgroundBarChartRodData(
                                 show: true,
                                 toY: data.fold(0.0, (max, e) {
-                                  final v = (e['total'] as num).toDouble();
-                                  return v > max ? v : max;
-                                }) * 1.2,
+                                      final v = (e['total'] as num).toDouble();
+                                      return v > max ? v : max;
+                                    }) *
+                                    1.2,
                                 color: color.withOpacity(0.06),
                               ),
                             ),
@@ -247,7 +268,8 @@ class _StatisticsScreenState extends State<StatisticsScreen>
 
               // Category breakdown
               Text('Répartition par catégorie',
-                  style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700)),
+                  style: GoogleFonts.poppins(
+                      fontSize: 16, fontWeight: FontWeight.w700)),
               const SizedBox(height: 12),
 
               if (txProvider.expenseByCategory.isEmpty && type == 'expense')
@@ -274,7 +296,8 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                     child: Row(
                       children: [
                         Container(
-                          width: 10, height: 40,
+                          width: 10,
+                          height: 40,
                           decoration: BoxDecoration(
                             color: catColor,
                             borderRadius: BorderRadius.circular(4),
@@ -286,7 +309,8 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(e['name'] ?? '',
-                                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+                                  style: GoogleFonts.poppins(
+                                      fontWeight: FontWeight.w600)),
                               const SizedBox(height: 4),
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(4),
@@ -309,7 +333,8 @@ class _StatisticsScreenState extends State<StatisticsScreen>
                                     fontWeight: FontWeight.w700, fontSize: 13)),
                             Text('${(pct * 100).toStringAsFixed(1)}%',
                                 style: GoogleFonts.poppins(
-                                    fontSize: 11, color: AppTheme.textSecondary)),
+                                    fontSize: 11,
+                                    color: AppTheme.textSecondary)),
                           ],
                         ),
                       ],

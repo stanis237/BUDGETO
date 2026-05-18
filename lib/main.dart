@@ -43,7 +43,7 @@ class BudgetoApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => MonthlyPlanProvider()),
       ],
       child: MaterialApp(
-        title: 'Budgeto',
+        title: 'sansnkap',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         home: const _AppRoot(),

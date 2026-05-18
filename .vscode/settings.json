@@ -1,0 +1,7 @@
+{
+    "cmake.sourceDirectory": "C:/Users/Lenovo/OneDrive/Desktop/fluuter/BUGET/windows/flutter",
+    "cortex-debug.armToolchainPath": "${userRoot}/.eide/tools/gcc_arm\\bin",
+    "cortex-debug.JLinkGDBServerPath": "${userRoot}/.eide/tools/jlink\\JLinkGDBServerCL.exe",
+    "java.configuration.updateBuildConfiguration": "interactive",
+    "claudeCodeChat.permissions.yoloMode": true
+}
