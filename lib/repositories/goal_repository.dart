@@ -1,19 +1,18 @@
-import 'package:uuid/uuid.dart';
-import '../core/database/database_helper.dart';
+import '../core/api/api_client.dart';
 import '../models/goal.dart';
+import 'package:intl/intl.dart';
 
 class GoalRepository {
-  final DatabaseHelper _db = DatabaseHelper();
-  final _uuid = const Uuid();
+  final ApiClient _api = ApiClient();
 
   Future<List<GoalModel>> getGoals(String userId) async {
-    final results = await _db.query(
-      'goals',
-      where: 'user_id = ?',
-      whereArgs: [userId],
-      orderBy: 'created_at DESC',
-    );
-    return results.map((e) => GoalModel.fromMap(e)).toList();
+    try {
+      final response = await _api.dio.get('/goals/');
+      final data = response.data is Map ? response.data['results'] as List : response.data as List;
+      return data.map((e) => GoalModel.fromMap(e)).toList();
+    } catch (e) {
+      return [];
+    }
   }
 
   Future<GoalModel> addGoal({
@@ -24,33 +23,33 @@ class GoalRepository {
     DateTime? deadline,
     String? imageKey,
   }) async {
-    final goal = GoalModel(
-      id: _uuid.v4(),
-      userId: userId,
-      title: title,
-      targetAmount: targetAmount,
-      currentAmount: currentAmount,
-      deadline: deadline,
-      imageKey: imageKey,
-      createdAt: DateTime.now(),
-    );
-    await _db.insert('goals', goal.toMap());
-    return goal;
+    final response = await _api.dio.post('/goals/', data: {
+      'title': title,
+      'target_amount': targetAmount,
+      'current_amount': currentAmount,
+      'deadline': deadline != null ? DateFormat('yyyy-MM-dd').format(deadline) : null,
+      'image_key': imageKey,
+    });
+    return GoalModel.fromMap(response.data);
   }
 
   Future<void> updateGoal(GoalModel goal) async {
-    await _db.update('goals', goal.toMap(), 'id = ?', [goal.id]);
+    await _api.dio.patch('/goals/${goal.id}/', data: {
+      'title': goal.title,
+      'target_amount': goal.targetAmount,
+      'current_amount': goal.currentAmount,
+      'deadline': goal.deadline != null ? DateFormat('yyyy-MM-dd').format(goal.deadline!) : null,
+      'image_key': goal.imageKey,
+    });
   }
 
   Future<void> addContribution(String goalId, double amount) async {
-    final results = await _db.query('goals', where: 'id = ?', whereArgs: [goalId]);
-    if (results.isEmpty) return;
-    final goal = GoalModel.fromMap(results.first);
-    final newAmount = (goal.currentAmount + amount).clamp(0, goal.targetAmount).toDouble();
-    await _db.update('goals', {'current_amount': newAmount}, 'id = ?', [goalId]);
+    await _api.dio.post('/goals/$goalId/contribute/', data: {
+      'amount': amount,
+    });
   }
 
   Future<void> deleteGoal(String id) async {
-    await _db.delete('goals', 'id = ?', [id]);
+    await _api.dio.delete('/goals/$id/');
   }
 }

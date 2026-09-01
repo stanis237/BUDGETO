@@ -28,7 +28,7 @@ class UserModel {
     id: map['id'],
     name: map['name'],
     email: map['email'],
-    passwordHash: map['password_hash'],
+    passwordHash: map['password_hash'] ?? '',
     currency: map['currency'] ?? 'EUR',
     createdAt: DateTime.parse(map['created_at']),
   );

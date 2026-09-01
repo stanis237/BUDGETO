@@ -4,7 +4,7 @@ import 'package:budgeto/main.dart';
 
 void main() {
   testWidgets('App smoke test', (WidgetTester tester) async {
-    await tester.pumpWidget(const BudgetoApp());
+    await tester.pumpWidget(const StankapApp());
     expect(find.byType(MaterialApp), findsOneWidget);
   });
 }

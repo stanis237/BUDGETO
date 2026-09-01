@@ -12,6 +12,7 @@ import '../profile/profile_screen.dart';
 import '../transactions/add_transaction_screen.dart';
 import '../../services/notification_service.dart';
 import '../../providers/monthly_plan_provider.dart';
+import '../ai_assistant/ai_assistant_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -82,6 +83,13 @@ class _HomeScreenState extends State<HomeScreen> {
     ).then((_) => _loadData());
   }
 
+  void _openAiAssistant() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const AiAssistantScreen()),
+    ).then((_) => _loadData());
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -96,20 +104,52 @@ class _HomeScreenState extends State<HomeScreen> {
           const ProfileScreen(),
         ],
       ),
-      floatingActionButton: Container(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          boxShadow: AppTheme.floatingShadow,
-        ),
-        child: FloatingActionButton(
-          onPressed: _openAddTransaction,
-          backgroundColor: AppTheme.primary,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          child: const Icon(Icons.add_rounded, size: 32),
-        ),
-      ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButton: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.bottomCenter,
+        children: [
+          Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              boxShadow: AppTheme.floatingShadow,
+            ),
+            child: FloatingActionButton(
+              heroTag: 'main_fab',
+              onPressed: _openAddTransaction,
+              backgroundColor: AppTheme.primary,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              child: const Icon(Icons.add_rounded, size: 32),
+            ),
+          ),
+          // AI Assistant Button floating above the nav bar on the right
+          Positioned(
+            right: -MediaQuery.of(context).size.width * 0.4 + 16,
+            bottom: 30,
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.secondary.withOpacity(0.3),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  )
+                ],
+              ),
+              child: FloatingActionButton.small(
+                heroTag: 'ai_fab',
+                onPressed: _openAiAssistant,
+                backgroundColor: Colors.white,
+                foregroundColor: AppTheme.primary,
+                elevation: 0,
+                child: const Icon(Icons.auto_awesome),
+              ),
+            ),
+          ),
+        ],
+      ),
       bottomNavigationBar: _buildBottomNav(),
     );
   }

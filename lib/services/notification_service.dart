@@ -69,7 +69,7 @@ class NotificationService {
       tz.TZDateTime.from(nextSunday, tz.local),
       const NotificationDetails(
         android: AndroidNotificationDetails(
-          'budgeto_weekly',
+          'stankap_weekly',
           'Suivi Hebdomadaire',
           channelDescription: 'Notifications de résumé hebdomadaire',
           importance: Importance.high,
@@ -80,6 +80,32 @@ class NotificationService {
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime, // Repeats weekly
+    );
+  }
+
+  Future<void> scheduleBillReminder({
+    required String id,
+    required String title,
+    required String body,
+    required DateTime scheduledDate,
+  }) async {
+    await flutterLocalNotificationsPlugin.zonedSchedule(
+      id.hashCode,
+      'Rappel de facture : $title',
+      body,
+      tz.TZDateTime.from(scheduledDate, tz.local),
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'stankap_bills',
+          'Rappels de Factures',
+          channelDescription: 'Notifications pour les factures à payer',
+          importance: Importance.max,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(),
+      ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
     );
   }
 }

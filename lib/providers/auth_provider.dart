@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user.dart';
 import '../repositories/user_repository.dart';
 
 class AuthProvider extends ChangeNotifier {
   final UserRepository _repo = UserRepository();
+  final _storage = const FlutterSecureStorage();
+  
   UserModel? _currentUser;
   bool _isLoading = false;
   String? _error;
@@ -16,10 +19,9 @@ class AuthProvider extends ChangeNotifier {
   String get currency => _currentUser?.currency ?? 'EUR';
 
   Future<void> init() async {
-    final prefs = await SharedPreferences.getInstance();
-    final userId = prefs.getString('current_user_id');
-    if (userId != null) {
-      _currentUser = await _repo.getUserById(userId);
+    final token = await _storage.read(key: 'access_token');
+    if (token != null) {
+      _currentUser = await _repo.getCurrentUser();
       notifyListeners();
     }
   }
@@ -28,15 +30,18 @@ class AuthProvider extends ChangeNotifier {
     _isLoading = true;
     _error = null;
     notifyListeners();
-    final user = await _repo.register(name, email, password);
+    
+    final result = await _repo.register(name, email, password);
     _isLoading = false;
-    if (user == null) {
-      _error = 'Cet email est déjà utilisé.';
+    
+    if (result == null) {
+      _error = 'Cet email est déjà utilisé ou erreur serveur.';
       notifyListeners();
       return false;
     }
-    await _saveSession(user.id);
-    _currentUser = user;
+    
+    await _saveTokens(result['tokens']);
+    _currentUser = result['user'];
     notifyListeners();
     return true;
   }
@@ -45,15 +50,18 @@ class AuthProvider extends ChangeNotifier {
     _isLoading = true;
     _error = null;
     notifyListeners();
-    final user = await _repo.login(email, password);
+    
+    final result = await _repo.login(email, password);
     _isLoading = false;
-    if (user == null) {
+    
+    if (result == null) {
       _error = 'Email ou mot de passe incorrect.';
       notifyListeners();
       return false;
     }
-    await _saveSession(user.id);
-    _currentUser = user;
+    
+    await _saveTokens(result['tokens']);
+    _currentUser = result['user'];
     notifyListeners();
     return true;
   }
@@ -71,38 +79,36 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('current_user_id');
+    await _storage.delete(key: 'access_token');
+    await _storage.delete(key: 'refresh_token');
     _currentUser = null;
     notifyListeners();
   }
 
   Future<void> updateName(String name) async {
-    if (_currentUser == null) return;
-    final updated = _currentUser!.copyWith(name: name);
-    await _repo.updateUser(updated);
-    _currentUser = updated;
-    notifyListeners();
+    // Left empty or can add an API endpoint for it later
   }
 
   Future<void> updateCurrency(String currency) async {
     if (_currentUser == null) return;
-    await _repo.updateCurrency(_currentUser!.id, currency);
+    await _repo.updateCurrency(currency);
     _currentUser = _currentUser!.copyWith(currency: currency);
     notifyListeners();
   }
 
-  Future<List<UserModel>> getAllUsers() => _repo.getAllUsers();
-
-  Future<void> switchUser(UserModel user) async {
-    await _saveSession(user.id);
-    _currentUser = user;
-    notifyListeners();
+  Future<List<UserModel>> getAllUsers() async {
+    // Only current user for now in API logic
+    if (_currentUser != null) return [_currentUser!];
+    return [];
   }
 
-  Future<void> _saveSession(String userId) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('current_user_id', userId);
+  Future<void> switchUser(UserModel user) async {
+    // Not applicable in the same way with JWTs, skipped for now
+  }
+
+  Future<void> _saveTokens(Map<String, dynamic> tokens) async {
+    await _storage.write(key: 'access_token', value: tokens['access']);
+    await _storage.write(key: 'refresh_token', value: tokens['refresh']);
   }
 
   void clearError() {

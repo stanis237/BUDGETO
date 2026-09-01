@@ -76,6 +76,7 @@ class TransactionProvider extends ChangeNotifier {
     required double amount,
     required String type,
     required String categoryId,
+    required String accountId,
     String? description,
     required DateTime date,
   }) async {
@@ -84,6 +85,7 @@ class TransactionProvider extends ChangeNotifier {
       amount: amount,
       type: type,
       categoryId: categoryId,
+      accountId: accountId,
       description: description,
       date: date,
     );
@@ -93,6 +95,10 @@ class TransactionProvider extends ChangeNotifier {
   Future<void> deleteTransaction(String id, String userId) async {
     await _repo.deleteTransaction(id);
     await loadAll(userId);
+  }
+
+  Future<TransactionModel?> getTransactionById(String id) async {
+    return _repo.getTransactionById(id);
   }
 
   void changeMonth(String userId, int delta) {

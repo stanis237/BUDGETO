@@ -19,13 +19,13 @@ class MonthlyPlan {
 
   factory MonthlyPlan.fromMap(Map<String, dynamic> map) {
     return MonthlyPlan(
-      id: map['id'],
-      userId: map['user_id'],
-      month: map['month'],
-      year: map['year'],
-      needs: (map['needs'] as num).toDouble(),
-      expectations: (map['expectations'] as num).toDouble(),
-      createdAt: DateTime.parse(map['created_at']),
+      id: map['id']?.toString() ?? '',
+      userId: map['user_id']?.toString() ?? map['user']?.toString() ?? '',
+      month: int.tryParse(map['month']?.toString() ?? '1') ?? 1,
+      year: int.tryParse(map['year']?.toString() ?? DateTime.now().year.toString()) ?? DateTime.now().year,
+      needs: double.tryParse(map['needs']?.toString() ?? '0') ?? 0.0,
+      expectations: double.tryParse(map['expectations']?.toString() ?? '0') ?? 0.0,
+      createdAt: map['created_at'] != null ? DateTime.parse(map['created_at']) : DateTime.now(),
     );
   }
 

@@ -25,16 +25,16 @@ class BudgetModel {
   });
 
   factory BudgetModel.fromMap(Map<String, dynamic> map) => BudgetModel(
-    id: map['id'],
-    userId: map['user_id'],
-    categoryId: map['category_id'],
-    amount: (map['amount'] as num).toDouble(),
-    month: map['month'],
-    year: map['year'],
-    categoryName: map['category_name'],
-    categoryIcon: map['category_icon'],
-    categoryColor: map['category_color'],
-    spent: (map['spent'] as num?)?.toDouble() ?? 0,
+    id: map['id']?.toString() ?? '',
+    userId: map['user_id']?.toString() ?? map['user']?.toString() ?? '',
+    categoryId: map['category_id']?.toString() ?? map['category']?.toString() ?? '',
+    amount: double.tryParse(map['amount']?.toString() ?? '0') ?? 0.0,
+    month: int.tryParse(map['month']?.toString() ?? '1') ?? 1,
+    year: int.tryParse(map['year']?.toString() ?? DateTime.now().year.toString()) ?? DateTime.now().year,
+    categoryName: map['category_name']?.toString(),
+    categoryIcon: map['category_icon']?.toString(),
+    categoryColor: map['category_color']?.toString(),
+    spent: double.tryParse(map['spent']?.toString() ?? '0') ?? 0.0,
   );
 
   Map<String, dynamic> toMap() => {

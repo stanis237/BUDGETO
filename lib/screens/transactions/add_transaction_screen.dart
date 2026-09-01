@@ -5,6 +5,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/transaction_provider.dart';
+import '../../providers/account_provider.dart';
 import '../../providers/recurring_transaction_provider.dart';
 import '../../models/category.dart';
 
@@ -22,6 +23,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   String _type = 'expense';
   String _period = 'none';
   String? _selectedCategoryId;
+  String? _selectedAccountId;
   DateTime _selectedDate = DateTime.now();
   List<CategoryModel> _categories = [];
   bool _isLoading = false;
@@ -31,6 +33,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   void initState() {
     super.initState();
     _loadCategories();
+    _loadAccounts();
   }
 
   Future<void> _loadCategories() async {
@@ -39,6 +42,22 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       setState(() {
         _categories = cats;
         _categoriesLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadAccounts() async {
+    final auth = context.read<AuthProvider>();
+    final userId = auth.currentUser?.id ?? 'guest';
+    await context.read<AccountProvider>().loadAccounts(userId);
+    var accounts = context.read<AccountProvider>().accounts;
+    if (accounts.isEmpty) {
+      await context.read<AccountProvider>().createDefaultAccount(userId);
+      accounts = context.read<AccountProvider>().accounts;
+    }
+    if (mounted && accounts.isNotEmpty) {
+      setState(() {
+        _selectedAccountId = accounts.first.id;
       });
     }
   }
@@ -67,10 +86,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_selectedCategoryId == null) {
+    if (_selectedCategoryId == null || _selectedAccountId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Veuillez sélectionner une catégorie',
+          content: Text(
+              _selectedCategoryId == null
+                  ? 'Veuillez sélectionner une catégorie'
+                  : 'Veuillez sélectionner un compte',
               style: GoogleFonts.poppins()),
           backgroundColor: AppTheme.error,
           behavior: SnackBarBehavior.floating,
@@ -80,39 +102,60 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
       return;
     }
     setState(() => _isLoading = true);
-    final userId = context.read<AuthProvider>().currentUser?.id ?? 'guest';
-    await context.read<TransactionProvider>().addTransaction(
-      userId: userId,
-      amount: double.parse(_amountCtrl.text.replaceAll(',', '.')),
-      type: _type,
-      categoryId: _selectedCategoryId!,
-      description: _descCtrl.text.isEmpty ? null : _descCtrl.text,
-      date: _selectedDate,
-    );
+    try {
+      final userId = context.read<AuthProvider>().currentUser?.id ?? 'guest';
+      final amount = double.parse(_amountCtrl.text.replaceAll(',', '.'));
 
-    if (_period != 'none') {
-      await context.read<RecurringTransactionProvider>().addRecurringTransaction(
+      await context.read<TransactionProvider>().addTransaction(
         userId: userId,
-        amount: double.parse(_amountCtrl.text.replaceAll(',', '.')),
+        amount: amount,
         type: _type,
         categoryId: _selectedCategoryId!,
+        accountId: _selectedAccountId!,
         description: _descCtrl.text.isEmpty ? null : _descCtrl.text,
-        period: _period,
-        startDate: _selectedDate,
+        date: _selectedDate,
       );
-    }
 
-    if (mounted) {
-      setState(() => _isLoading = false);
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Transaction ajoutée avec succès', style: GoogleFonts.poppins()),
-          backgroundColor: AppTheme.success,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      );
+      // Mettre à jour le solde du compte
+      await context.read<AccountProvider>().updateBalance(_selectedAccountId!, amount, _type);
+
+      if (_period != 'none') {
+        await context.read<RecurringTransactionProvider>().addRecurringTransaction(
+          userId: userId,
+          amount: amount,
+          type: _type,
+          categoryId: _selectedCategoryId!,
+          accountId: _selectedAccountId!,
+          description: _descCtrl.text.isEmpty ? null : _descCtrl.text,
+          period: _period,
+          startDate: _selectedDate,
+        );
+      }
+
+      if (mounted) {
+        setState(() => _isLoading = false);
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Transaction ajoutée avec succès', style: GoogleFonts.poppins()),
+            backgroundColor: AppTheme.success,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors de la création de la transaction', style: GoogleFonts.poppins()),
+            backgroundColor: AppTheme.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
     }
   }
 
@@ -201,6 +244,42 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                         final n = double.tryParse(v.replaceAll(',', '.'));
                         if (n == null || n <= 0) return 'Montant invalide';
                         return null;
+                      },
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Accounts
+                    _label('Compte'),
+                    const SizedBox(height: 8),
+                    Consumer<AccountProvider>(
+                      builder: (context, accProv, _) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: AppTheme.background,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: const Color(0xFFEEF0F5)),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: _selectedAccountId,
+                              isExpanded: true,
+                              icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppTheme.primary),
+                              style: GoogleFonts.poppins(fontSize: 15, color: AppTheme.textPrimary),
+                              onChanged: (String? newValue) {
+                                if (newValue != null) {
+                                  setState(() => _selectedAccountId = newValue);
+                                }
+                              },
+                              items: accProv.accounts.map((acc) {
+                                return DropdownMenuItem(
+                                  value: acc.id,
+                                  child: Text(acc.name),
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                        );
                       },
                     ),
                     const SizedBox(height: 20),

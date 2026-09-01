@@ -7,12 +7,41 @@ import '../../providers/auth_provider.dart';
 import '../../providers/transaction_provider.dart';
 import '../../providers/budget_provider.dart';
 import '../../providers/goal_provider.dart';
+import '../../services/security_service.dart';
 import '../onboarding/welcome_screen.dart';
 import '../transactions/recurring_transactions_screen.dart';
 import '../planning/monthly_plan_screen.dart';
+import '../gamification/gamification_screen.dart';
+import '../household/household_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  bool _biometricEnabled = false;
+  bool _canCheckBio = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSecuritySettings();
+  }
+
+  Future<void> _loadSecuritySettings() async {
+    final security = SecurityService();
+    final enabled = await security.isBiometricEnabled();
+    final canCheck = await security.canCheckBiometrics();
+    if (mounted) {
+      setState(() {
+        _biometricEnabled = enabled;
+        _canCheckBio = canCheck;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +64,7 @@ class ProfileScreen extends StatelessWidget {
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
-                  colors: [Color(0xFF1B5E20), Color(0xFF2E7D32)],
+                  colors: [Color(0xFF1D4ED8), Color(0xFF2563EB)],
                 ),
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: AppTheme.floatingShadow,
@@ -48,7 +77,7 @@ class ProfileScreen extends StatelessWidget {
                     child: Text(
                       user?.name.isNotEmpty == true
                           ? user!.name[0].toUpperCase()
-                          : 'B',
+                          : 'S',
                       style: GoogleFonts.poppins(
                           fontSize: 28, color: Colors.white, fontWeight: FontWeight.w800),
                     ),
@@ -119,8 +148,67 @@ class ProfileScreen extends StatelessWidget {
                 label: 'Planification Mensuelle',
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MonthlyPlanScreen())),
               ),
+              const Divider(height: 1, indent: 56),
+              _settingsItem(
+                icon: Icons.emoji_events_rounded,
+                color: const Color(0xFFFFB300),
+                label: 'Mes Réussites (Badges & Défis)',
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const GamificationScreen())),
+              ),
+              const Divider(height: 1, indent: 56),
+              _settingsItem(
+                icon: Icons.group_rounded,
+                color: const Color(0xFF3F51B5),
+                label: 'Foyer Partagé (Budget Commun)',
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const HouseholdScreen())),
+              ),
             ]),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
+
+            // Security section
+            _sectionTitle('Sécurité'),
+            const SizedBox(height: 12),
+            _buildCard([
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 38, height: 38,
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.fingerprint_rounded, color: Colors.blue, size: 20),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Text('Verrouillage Biométrique',
+                          style: GoogleFonts.poppins(
+                              fontSize: 14, fontWeight: FontWeight.w500, color: AppTheme.textPrimary)),
+                    ),
+                    Switch.adaptive(
+                      value: _biometricEnabled,
+                      activeColor: AppTheme.primary,
+                      onChanged: _canCheckBio ? (val) async {
+                        final security = SecurityService();
+                        if (val) {
+                          final success = await security.authenticate();
+                          if (success) {
+                            await security.setBiometricEnabled(true);
+                            setState(() => _biometricEnabled = true);
+                          }
+                        } else {
+                          await security.setBiometricEnabled(false);
+                          setState(() => _biometricEnabled = false);
+                        }
+                      } : null,
+                    ),
+                  ],
+                ),
+              ),
+            ]),
+            const SizedBox(height: 24),
 
             // Account section
             _sectionTitle('Compte'),
@@ -153,7 +241,7 @@ class ProfileScreen extends StatelessWidget {
 
             const SizedBox(height: 24),
             Center(
-              child: Text('Budgeto v1.0.0',
+              child: Text('Stankap v1.0.0',
                   style: GoogleFonts.poppins(
                       fontSize: 12, color: AppTheme.textHint)),
             ),
@@ -408,7 +496,7 @@ class ProfileScreen extends StatelessWidget {
   void _showAbout(BuildContext context) {
     showAboutDialog(
       context: context,
-      applicationName: 'Budgeto',
+      applicationName: 'Stankap',
       applicationVersion: '1.0.0',
       applicationIcon: Container(
         width: 56, height: 56,

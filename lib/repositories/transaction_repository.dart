@@ -1,124 +1,130 @@
-import 'package:uuid/uuid.dart';
-import '../core/database/database_helper.dart';
+import '../core/api/api_client.dart';
 import '../models/transaction.dart';
 import '../models/category.dart';
+import 'package:intl/intl.dart';
 
 class TransactionRepository {
-  final DatabaseHelper _db = DatabaseHelper();
-  final _uuid = const Uuid();
+  final ApiClient _api = ApiClient();
 
   Future<List<TransactionModel>> getTransactions(String userId, {int? limit}) async {
-    final results = await _db.rawQuery('''
-      SELECT t.*, c.name as category_name, c.icon as category_icon, c.color as category_color
-      FROM transactions t
-      LEFT JOIN categories c ON t.category_id = c.id
-      WHERE t.user_id = ?
-      ORDER BY t.date DESC
-      ${limit != null ? 'LIMIT $limit' : ''}
-    ''', [userId]);
-    return results.map((e) => TransactionModel.fromMap(e)).toList();
-  }
-
-  Future<List<TransactionModel>> getTransactionsByMonth(
-      String userId, int month, int year) async {
-    final results = await _db.rawQuery('''
-      SELECT t.*, c.name as category_name, c.icon as category_icon, c.color as category_color
-      FROM transactions t
-      LEFT JOIN categories c ON t.category_id = c.id
-      WHERE t.user_id = ?
-        AND strftime('%m', t.date) = ? AND strftime('%Y', t.date) = ?
-      ORDER BY t.date DESC
-    ''', [userId, month.toString().padLeft(2, '0'), year.toString()]);
-    return results.map((e) => TransactionModel.fromMap(e)).toList();
-  }
-
-  Future<Map<String, double>> getMonthlySummary(
-      String userId, int month, int year) async {
-    final results = await _db.rawQuery('''
-      SELECT type, SUM(amount) as total
-      FROM transactions
-      WHERE user_id = ?
-        AND strftime('%m', date) = ? AND strftime('%Y', date) = ?
-      GROUP BY type
-    ''', [userId, month.toString().padLeft(2, '0'), year.toString()]);
-
-    double income = 0, expense = 0;
-    for (final r in results) {
-      if (r['type'] == 'income') income = (r['total'] as num).toDouble();
-      if (r['type'] == 'expense') expense = (r['total'] as num).toDouble();
+    try {
+      final response = await _api.dio.get('/transactions/');
+      final data = response.data['results'] as List; // Pagination wrapper
+      return data.map((e) => TransactionModel.fromMap(e)).toList();
+    } catch (e) {
+      return [];
     }
-    return {'income': income, 'expense': expense, 'balance': income - expense};
   }
 
-  Future<List<Map<String, dynamic>>> getExpenseByCategory(
-      String userId, int month, int year) async {
-    return _db.rawQuery('''
-      SELECT c.id, c.name, c.icon, c.color, SUM(t.amount) as total
-      FROM transactions t
-      LEFT JOIN categories c ON t.category_id = c.id
-      WHERE t.user_id = ? AND t.type = 'expense'
-        AND strftime('%m', t.date) = ? AND strftime('%Y', t.date) = ?
-      GROUP BY c.id
-      ORDER BY total DESC
-    ''', [userId, month.toString().padLeft(2, '0'), year.toString()]);
+  Future<List<TransactionModel>> getTransactionsByMonth(String userId, int month, int year) async {
+    try {
+      final response = await _api.dio.get('/transactions/', queryParameters: {
+        'month': month,
+        'year': year,
+      });
+      // Handle pagination or straight list
+      final data = response.data is Map ? response.data['results'] as List : response.data as List;
+      return data.map((e) => TransactionModel.fromMap(e)).toList();
+    } catch (e) {
+      return [];
+    }
   }
 
-  Future<List<Map<String, dynamic>>> getDailyTotals(
-      String userId, String type, int month, int year) async {
-    return _db.rawQuery('''
-      SELECT strftime('%d', date) as day, SUM(amount) as total
-      FROM transactions
-      WHERE user_id = ? AND type = ?
-        AND strftime('%m', date) = ? AND strftime('%Y', date) = ?
-      GROUP BY strftime('%d', date)
-      ORDER BY day ASC
-    ''', [userId, type, month.toString().padLeft(2, '0'), year.toString()]);
+  Future<Map<String, double>> getMonthlySummary(String userId, int month, int year) async {
+    try {
+      final response = await _api.dio.get('/transactions/summary/', queryParameters: {
+        'month': month,
+        'year': year,
+      });
+      return {
+        'income': (response.data['income'] as num).toDouble(),
+        'expense': (response.data['expense'] as num).toDouble(),
+        'balance': (response.data['balance'] as num).toDouble(),
+      };
+    } catch (e) {
+      return {'income': 0, 'expense': 0, 'balance': 0};
+    }
   }
 
-  Future<List<Map<String, dynamic>>> getWeeklyTotals(
-      String userId, String type, int month, int year) async {
-    return _db.rawQuery('''
-      SELECT strftime('%W', date) as week, SUM(amount) as total
-      FROM transactions
-      WHERE user_id = ? AND type = ?
-        AND strftime('%m', date) = ? AND strftime('%Y', date) = ?
-      GROUP BY strftime('%W', date)
-      ORDER BY week ASC
-    ''', [userId, type, month.toString().padLeft(2, '0'), year.toString()]);
+  Future<List<Map<String, dynamic>>> getExpenseByCategory(String userId, int month, int year) async {
+    try {
+      final response = await _api.dio.get('/transactions/by-category/', queryParameters: {
+        'month': month,
+        'year': year,
+      });
+      return List<Map<String, dynamic>>.from(response.data);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getDailyTotals(String userId, String type, int month, int year) async {
+    try {
+      final response = await _api.dio.get('/transactions/daily-totals/', queryParameters: {
+        'type': type,
+        'month': month,
+        'year': year,
+      });
+      return List<Map<String, dynamic>>.from(response.data);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getWeeklyTotals(String userId, String type, int month, int year) async {
+    try {
+      final response = await _api.dio.get('/transactions/weekly-totals/', queryParameters: {
+        'type': type,
+        'month': month,
+        'year': year,
+      });
+      return List<Map<String, dynamic>>.from(response.data);
+    } catch (e) {
+      return [];
+    }
   }
 
   Future<List<CategoryModel>> getCategories({String? type}) async {
-    final results = await _db.query(
-      'categories',
-      where: type != null ? 'type = ?' : null,
-      whereArgs: type != null ? [type] : null,
-    );
-    return results.map((e) => CategoryModel.fromMap(e)).toList();
+    try {
+      final params = type != null ? {'type': type} : null;
+      final response = await _api.dio.get('/categories/', queryParameters: params);
+      final data = response.data is Map ? response.data['results'] as List : response.data as List;
+      return data.map((e) => CategoryModel.fromMap(e)).toList();
+    } catch (e) {
+      return [];
+    }
   }
 
   Future<TransactionModel> addTransaction({
-    required String userId,
+    required String userId, // No longer strictly needed for API request
     required double amount,
     required String type,
     required String categoryId,
+    required String accountId,
     String? description,
     required DateTime date,
   }) async {
-    final tx = TransactionModel(
-      id: _uuid.v4(),
-      userId: userId,
-      amount: amount,
-      type: type,
-      categoryId: categoryId,
-      description: description,
-      date: date,
-      createdAt: DateTime.now(),
-    );
-    await _db.insert('transactions', tx.toMap());
-    return tx;
+    final response = await _api.dio.post('/transactions/', data: {
+      'amount': amount,
+      'type': type,
+      'category': categoryId,
+      'account': accountId,
+      'description': description,
+      'date': DateFormat('yyyy-MM-dd').format(date),
+    });
+    return TransactionModel.fromMap(response.data);
   }
 
   Future<void> deleteTransaction(String id) async {
-    await _db.delete('transactions', 'id = ?', [id]);
+    await _api.dio.delete('/transactions/$id/');
+  }
+
+  Future<TransactionModel?> getTransactionById(String id) async {
+    try {
+      final response = await _api.dio.get('/transactions/$id/');
+      return TransactionModel.fromMap(response.data);
+    } catch (e) {
+      return null;
+    }
   }
 }

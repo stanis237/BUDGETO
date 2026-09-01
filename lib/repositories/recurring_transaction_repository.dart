@@ -1,20 +1,18 @@
-import 'package:uuid/uuid.dart';
-import '../core/database/database_helper.dart';
+import '../core/api/api_client.dart';
 import '../models/recurring_transaction.dart';
+import 'package:intl/intl.dart';
 
 class RecurringTransactionRepository {
-  final DatabaseHelper _db = DatabaseHelper();
-  final _uuid = const Uuid();
+  final ApiClient _api = ApiClient();
 
   Future<List<RecurringTransactionModel>> getRecurringTransactions(String userId) async {
-    final results = await _db.rawQuery('''
-      SELECT rt.*, c.name as category_name, c.icon as category_icon, c.color as category_color
-      FROM recurring_transactions rt
-      LEFT JOIN categories c ON rt.category_id = c.id
-      WHERE rt.user_id = ?
-      ORDER BY rt.next_date ASC
-    ''', [userId]);
-    return results.map((e) => RecurringTransactionModel.fromMap(e)).toList();
+    try {
+      final response = await _api.dio.get('/recurring-transactions/');
+      final data = response.data is Map ? response.data['results'] as List : response.data as List;
+      return data.map((e) => RecurringTransactionModel.fromMap(e)).toList();
+    } catch (e) {
+      return [];
+    }
   }
 
   Future<RecurringTransactionModel> addRecurringTransaction({
@@ -22,52 +20,32 @@ class RecurringTransactionRepository {
     required double amount,
     required String type,
     required String categoryId,
+    required String accountId,
     String? description,
     required String period,
     required DateTime startDate,
   }) async {
-    final id = _uuid.v4();
-    final nextDate = _calculateNextDate(startDate, period);
-    
-    final rt = RecurringTransactionModel(
-      id: id,
-      userId: userId,
-      amount: amount,
-      type: type,
-      categoryId: categoryId,
-      description: description,
-      period: period,
-      startDate: startDate,
-      nextDate: nextDate,
-      createdAt: DateTime.now(),
-    );
-    await _db.insert('recurring_transactions', rt.toMap());
-    return rt;
+    final response = await _api.dio.post('/recurring-transactions/', data: {
+      'amount': amount,
+      'type': type,
+      'category': categoryId,
+      'account': accountId,
+      'description': description,
+      'period': period,
+      'start_date': DateFormat('yyyy-MM-dd').format(startDate),
+    });
+    return RecurringTransactionModel.fromMap(response.data);
   }
 
   Future<void> updateNextDate(String id, DateTime newNextDate) async {
-    await _db.rawQuery(
-      'UPDATE recurring_transactions SET next_date = ? WHERE id = ?',
-      [newNextDate.toIso8601String(), id],
-    );
+    // Actually the processing handles nextDate automatically. 
+    // If we need to manually update, we use PATCH
+    await _api.dio.patch('/recurring-transactions/$id/', data: {
+      'next_date': DateFormat('yyyy-MM-dd').format(newNextDate),
+    });
   }
 
   Future<void> deleteRecurringTransaction(String id) async {
-    await _db.delete('recurring_transactions', 'id = ?', [id]);
-  }
-
-  DateTime _calculateNextDate(DateTime from, String period) {
-    switch (period) {
-      case 'daily':
-        return from.add(const Duration(days: 1));
-      case 'weekly':
-        return from.add(const Duration(days: 7));
-      case 'monthly':
-        return DateTime(from.year, from.month + 1, from.day);
-      case 'yearly':
-        return DateTime(from.year + 1, from.month, from.day);
-      default:
-        return from;
-    }
+    await _api.dio.delete('/recurring-transactions/$id/');
   }
 }

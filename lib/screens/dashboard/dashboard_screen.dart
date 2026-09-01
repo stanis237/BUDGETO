@@ -10,6 +10,9 @@ import '../../providers/transaction_provider.dart';
 import '../../models/transaction.dart';
 import '../transactions/add_transaction_screen.dart';
 import '../statistics/statistics_screen.dart';
+import '../../services/analytics_service.dart';
+import '../../services/export_service.dart';
+import '../analytics/subscriptions_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -20,6 +23,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   List<TransactionModel> _recent = [];
   bool _loadingRecent = true;
+  Map<String, dynamic>? _forecast;
 
   @override
   void initState() {
@@ -29,8 +33,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _loadRecent() async {
     final userId = context.read<AuthProvider>().currentUser?.id ?? 'guest';
-    final data = await context.read<TransactionProvider>().getRecent(userId, limit: 5);
-    if (mounted) setState(() { _recent = data; _loadingRecent = false; });
+    final txProvider = context.read<TransactionProvider>();
+    final data = await txProvider.getRecent(userId, limit: 5);
+    
+    // Load forecast
+    final now = txProvider.selectedMonth;
+    final forecast = await AnalyticsService().getBudgetForecast(now.month, now.year);
+
+    if (mounted) {
+      setState(() { 
+        _recent = data; 
+        _loadingRecent = false; 
+        _forecast = forecast;
+      });
+    }
   }
 
   @override
@@ -61,6 +77,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               actions: [
                 IconButton(
+                  icon: const Icon(Icons.file_download_outlined, color: Colors.white),
+                  onPressed: () async {
+                    final txProvider = context.read<TransactionProvider>();
+                    if (txProvider.transactions.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Aucune transaction à exporter')),
+                      );
+                      return;
+                    }
+                    final exportService = ExportService();
+                    await exportService.exportToPdf(txProvider.transactions);
+                  },
+                ),
+                IconButton(
                   icon: const Icon(Icons.bar_chart_rounded, color: Colors.white),
                   onPressed: () {
                     Navigator.push(context, MaterialPageRoute(builder: (_) => const StatisticsScreen()));
@@ -82,6 +112,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   // Income / Expense cards
                   _buildSummaryCards(txProvider, currency),
                   const SizedBox(height: 24),
+                  // Forecast Card (Phase 5)
+                  if (_forecast != null) ...[
+                    _buildForecastCard(_forecast!, currency),
+                    const SizedBox(height: 24),
+                  ],
                   // Pie chart
                   if (txProvider.expenseByCategory.isNotEmpty) ...[
                     _sectionTitle('Répartition des dépenses', ''),
@@ -115,7 +150,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF1B5E20), Color(0xFF2E7D32)],
+          colors: [Color(0xFF1D4ED8), Color(0xFF2563EB)],
         ),
       ),
       child: SafeArea(
@@ -263,6 +298,78 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Widget _buildForecastCard(Map<String, dynamic> forecast, String currency) {
+    final projected = forecast['projected_end_of_month'] as num? ?? 0;
+    final daily = forecast['daily_average'] as num? ?? 0;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF6A11CB), Color(0xFF2575FC)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF2575FC).withOpacity(0.3),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          )
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.auto_graph_rounded, color: Colors.white, size: 24),
+              const SizedBox(width: 8),
+              Text('Prévision IA (Fin du mois)', style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Dépense estimée', style: GoogleFonts.poppins(color: Colors.white70, fontSize: 12)),
+                  Text(CurrencyFormatter.format(projected.toDouble(), currency), style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 24)),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text('Moy. journalière', style: GoogleFonts.poppins(color: Colors.white70, fontSize: 12)),
+                  Text(CurrencyFormatter.format(daily.toDouble(), currency), style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16)),
+                ],
+              )
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const SubscriptionsScreen()));
+              },
+              icon: const Icon(Icons.search_rounded, size: 18),
+              label: const Text('Détecter les abonnements cachés'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white.withOpacity(0.2),
+                foregroundColor: Colors.white,
+                elevation: 0,
+              ),
+            ),
+          )
+        ],
+      ),
+    );
+  }
+
   Widget _buildPieChart(TransactionProvider txProvider, String currency) {
     final data = txProvider.expenseByCategory;
     final total = data.fold(0.0, (s, e) => s + (e['total'] as num).toDouble());
@@ -393,18 +500,33 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Text('Aucune transaction ce mois-ci',
               style: GoogleFonts.poppins(color: AppTheme.textSecondary, fontSize: 14)),
           const SizedBox(height: 8),
-          TextButton.icon(
-            onPressed: () {
-              showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                backgroundColor: Colors.transparent,
-                builder: (_) => const AddTransactionScreen(),
-              ).then((_) => _loadRecent());
-            },
-            icon: const Icon(Icons.add_rounded, color: AppTheme.primary),
-            label: Text('Ajouter une transaction',
-                style: GoogleFonts.poppins(color: AppTheme.primary, fontSize: 13)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              TextButton.icon(
+                onPressed: () {
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (_) => const AddTransactionScreen(),
+                  ).then((_) => _loadRecent());
+                },
+                icon: const Icon(Icons.add_rounded, color: AppTheme.primary),
+                label: Text('Ajouter',
+                    style: GoogleFonts.poppins(color: AppTheme.primary, fontSize: 13)),
+              ),
+              const SizedBox(width: 8),
+              TextButton.icon(
+                onPressed: () {
+                  // Navigate to AI Assistant instead of local OCR
+                  Navigator.pushNamed(context, '/ai-assistant'); // or push
+                },
+                icon: const Icon(Icons.auto_awesome, color: AppTheme.primary),
+                label: Text('Assistant IA',
+                    style: GoogleFonts.poppins(color: AppTheme.primary, fontSize: 13)),
+              ),
+            ],
           ),
         ],
       ),

@@ -26,6 +26,7 @@ class RecurringTransactionProvider extends ChangeNotifier {
     required double amount,
     required String type,
     required String categoryId,
+    required String accountId,
     String? description,
     required String period,
     required DateTime startDate,
@@ -35,6 +36,7 @@ class RecurringTransactionProvider extends ChangeNotifier {
       amount: amount,
       type: type,
       categoryId: categoryId,
+      accountId: accountId,
       description: description,
       period: period,
       startDate: startDate,
@@ -65,6 +67,7 @@ class RecurringTransactionProvider extends ChangeNotifier {
           amount: rt.amount,
           type: rt.type,
           categoryId: rt.categoryId,
+          accountId: rt.accountId,
           description: rt.description ?? 'Abonnement/Récurrent',
           date: currentDateToProcess,
         );

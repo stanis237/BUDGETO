@@ -20,14 +20,14 @@ class GoalModel {
   });
 
   factory GoalModel.fromMap(Map<String, dynamic> map) => GoalModel(
-    id: map['id'],
-    userId: map['user_id'],
-    title: map['title'],
-    targetAmount: (map['target_amount'] as num).toDouble(),
-    currentAmount: (map['current_amount'] as num).toDouble(),
+    id: map['id']?.toString() ?? '',
+    userId: map['user_id']?.toString() ?? map['user']?.toString() ?? '',
+    title: map['title']?.toString() ?? '',
+    targetAmount: double.tryParse(map['target_amount']?.toString() ?? '0') ?? 0.0,
+    currentAmount: double.tryParse(map['current_amount']?.toString() ?? '0') ?? 0.0,
     deadline: map['deadline'] != null ? DateTime.parse(map['deadline']) : null,
-    imageKey: map['image_key'],
-    createdAt: DateTime.parse(map['created_at']),
+    imageKey: map['image_key']?.toString(),
+    createdAt: map['created_at'] != null ? DateTime.parse(map['created_at']) : DateTime.now(),
   );
 
   Map<String, dynamic> toMap() => {

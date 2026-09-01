@@ -1,54 +1,30 @@
-import 'package:uuid/uuid.dart';
-import '../core/database/database_helper.dart';
+import '../core/api/api_client.dart';
 import '../models/monthly_plan.dart';
 
 class MonthlyPlanRepository {
-  final DatabaseHelper _db = DatabaseHelper();
-  final _uuid = const Uuid();
+  final ApiClient _api = ApiClient();
 
   Future<MonthlyPlan?> getPlan(String userId, int month, int year) async {
-    final results = await _db.query(
-      'monthly_plans',
-      where: 'user_id = ? AND month = ? AND year = ?',
-      whereArgs: [userId, month, year],
-    );
-
-    if (results.isEmpty) return null;
-    return MonthlyPlan.fromMap(results.first);
+    try {
+      final response = await _api.dio.get('/monthly-plans/', queryParameters: {
+        'month': month,
+        'year': year,
+      });
+      final data = response.data is Map ? response.data['results'] as List : response.data as List;
+      if (data.isEmpty) return null;
+      return MonthlyPlan.fromMap(data.first);
+    } catch (e) {
+      return null;
+    }
   }
 
   Future<MonthlyPlan> savePlan(String userId, int month, int year, double needs, double expectations) async {
-    final existingPlan = await getPlan(userId, month, year);
-
-    if (existingPlan != null) {
-      final updatedPlan = MonthlyPlan(
-        id: existingPlan.id,
-        userId: userId,
-        month: month,
-        year: year,
-        needs: needs,
-        expectations: expectations,
-        createdAt: existingPlan.createdAt,
-      );
-      await _db.update(
-        'monthly_plans',
-        updatedPlan.toMap(),
-        'id = ?',
-        [existingPlan.id],
-      );
-      return updatedPlan;
-    } else {
-      final newPlan = MonthlyPlan(
-        id: _uuid.v4(),
-        userId: userId,
-        month: month,
-        year: year,
-        needs: needs,
-        expectations: expectations,
-        createdAt: DateTime.now(),
-      );
-      await _db.insert('monthly_plans', newPlan.toMap());
-      return newPlan;
-    }
+    final response = await _api.dio.post('/monthly-plans/', data: {
+      'month': month,
+      'year': year,
+      'needs': needs,
+      'expectations': expectations,
+    });
+    return MonthlyPlan.fromMap(response.data);
   }
 }

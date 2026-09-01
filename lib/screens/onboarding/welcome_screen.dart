@@ -95,11 +95,11 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                     size: 28, color: Colors.white),
                               ),
                               const SizedBox(width: 16),
-                              Text('Budgetos',
+                              Text('Stankap',
                                   style: GoogleFonts.poppins(
                                     fontSize: 32,
                                     fontWeight: FontWeight.w800,
-                                    color: const Color(0xFF1E293B),
+                                    color: AppTheme.textPrimary,
                                     letterSpacing: -0.5,
                                   )),
                             ],
