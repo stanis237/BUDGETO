@@ -84,15 +84,24 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                           // Header (Logo + Title)
                           Row(
                             children: [
-                              Container(
-                                width: 48,
-                                height: 48,
-                                decoration: BoxDecoration(
-                                  color: AppTheme.primary,
-                                  borderRadius: BorderRadius.circular(14),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(14),
+                                child: Image.asset(
+                                  'assets/images/app_icon.png',
+                                  width: 48,
+                                  height: 48,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) => Container(
+                                    width: 48,
+                                    height: 48,
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.primary,
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    child: const Icon(Icons.account_balance_wallet_rounded,
+                                        size: 28, color: Colors.white),
+                                  ),
                                 ),
-                                child: const Icon(Icons.account_balance_wallet_rounded,
-                                    size: 28, color: Colors.white),
                               ),
                               const SizedBox(width: 16),
                               Text('Stankap',

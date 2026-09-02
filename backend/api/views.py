@@ -15,7 +15,7 @@ from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .models import Account, Category, Transaction, Budget, Goal, RecurringTransaction, MonthlyPlan
+from .models import Account, Category, Transaction, Budget, Goal, RecurringTransaction, MonthlyPlan, Project, ProjectMilestone
 from .serializers import (
     RegisterSerializer, LoginSerializer, UserSerializer,
     AccountSerializer, CategorySerializer,
@@ -27,6 +27,8 @@ from .serializers import (
     MonthlySummarySerializer, CategoryExpenseSerializer,
     DailyTotalSerializer, WeeklyTotalSerializer, BudgetSummarySerializer,
     HouseholdSerializer,
+    ProjectReadSerializer, ProjectWriteSerializer,
+    ProjectContributionSerializer, ProjectMilestoneSerializer,
 )
 
 User = get_user_model()
@@ -532,8 +534,9 @@ def export_pdf(request):
     from reportlab.lib.pagesizes import A4
     from reportlab.lib import colors
     from reportlab.lib.units import cm
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image as RLImage
     from reportlab.lib.styles import getSampleStyleSheet
+    import os
 
     month = request.query_params.get('month')
     year = request.query_params.get('year')
@@ -546,6 +549,12 @@ def export_pdf(request):
     doc = SimpleDocTemplate(buffer, pagesize=A4)
     styles = getSampleStyleSheet()
     elements = []
+
+    # Logo
+    logo_path = os.path.join(settings.BASE_DIR, '..', 'assets', 'images', 'app_icon.png')
+    if os.path.exists(logo_path):
+        elements.append(RLImage(logo_path, width=48, height=48))
+        elements.append(Spacer(1, 0.5 * cm))
 
     # Title
     title_text = 'Rapport de Transactions - Stankap'
@@ -588,3 +597,91 @@ def export_pdf(request):
     response = HttpResponse(buffer, content_type='application/pdf')
     response['Content-Disposition'] = 'attachment; filename="transactions_stankap.pdf"'
     return response
+
+
+# ──────────────────────────────────────────────
+# Project ViewSet
+# ──────────────────────────────────────────────
+
+class ProjectViewSet(viewsets.ModelViewSet):
+    """CRUD for financial projects + contribution endpoint."""
+
+    def get_serializer_class(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return ProjectWriteSerializer
+        return ProjectReadSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.household:
+            return Project.objects.filter(user__household=user.household).prefetch_related('milestones')
+        return Project.objects.filter(user=user).prefetch_related('milestones')
+
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        project = serializer.save()
+        return Response(ProjectReadSerializer(project).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'])
+    def contribute(self, request, pk=None):
+        """POST /api/projects/{id}/contribute/ — Add funds to a project."""
+        project = self.get_object()
+        serializer = ProjectContributionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        amount = float(serializer.validated_data['amount'])
+        new_amount = min(
+            float(project.current_amount) + amount,
+            float(project.target_amount)
+        )
+        project.current_amount = new_amount
+
+        # Auto-complete if target reached
+        if new_amount >= float(project.target_amount):
+            project.status = 'completed'
+
+        project.save()
+        return Response(ProjectReadSerializer(project).data)
+
+    @action(detail=True, methods=['post'], url_path='update-status')
+    def update_status(self, request, pk=None):
+        """POST /api/projects/{id}/update-status/ — Change project status."""
+        project = self.get_object()
+        new_status = request.data.get('status')
+        if new_status not in dict(Project.STATUS_CHOICES):
+            return Response(
+                {'error': 'Statut invalide'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        project.status = new_status
+        project.save()
+        return Response(ProjectReadSerializer(project).data)
+
+
+class ProjectMilestoneViewSet(viewsets.ModelViewSet):
+    """CRUD for project milestones."""
+    serializer_class = ProjectMilestoneSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.household:
+            return ProjectMilestone.objects.filter(
+                project__user__household=user.household
+            )
+        return ProjectMilestone.objects.filter(project__user=user)
+
+    @action(detail=True, methods=['post'], url_path='update-status')
+    def update_status(self, request, pk=None):
+        """POST /api/project-milestones/{id}/update-status/ — Change milestone status."""
+        milestone = self.get_object()
+        new_status = request.data.get('status')
+        if new_status not in dict(ProjectMilestone.STATUS_CHOICES):
+            return Response(
+                {'error': 'Statut invalide'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        milestone.status = new_status
+        milestone.save()
+        return Response(ProjectMilestoneSerializer(milestone).data)
+

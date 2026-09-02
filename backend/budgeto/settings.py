@@ -73,18 +73,44 @@ WSGI_APPLICATION = 'budgeto.wsgi.application'
 
 
 # Database
-# Using SQLite for development, switch to PostgreSQL for production
+# Supports DATABASE_URL (Railway, Render, Supabase, Heroku, Neon) or individual DB params
 
-DATABASES = {
-    'default': {
-        'ENGINE': os.environ.get('DB_ENGINE', 'django.db.backends.sqlite3'),
-        'NAME': os.environ.get('DB_NAME', BASE_DIR / 'db.sqlite3'),
-        'USER': os.environ.get('DB_USER', ''),
-        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-        'HOST': os.environ.get('DB_HOST', ''),
-        'PORT': os.environ.get('DB_PORT', ''),
+DATABASE_URL = os.environ.get('DATABASE_URL')
+
+if DATABASE_URL:
+    try:
+        import dj_database_url
+        DATABASES = {
+            'default': dj_database_url.config(
+                default=DATABASE_URL,
+                conn_max_age=600,
+                conn_health_checks=True,
+            )
+        }
+    except ImportError:
+        import urllib.parse as urlparse
+        url = urlparse.urlparse(DATABASE_URL)
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql' if 'postgres' in url.scheme else 'django.db.backends.sqlite3',
+                'NAME': url.path[1:] if url.path else str(BASE_DIR / 'db.sqlite3'),
+                'USER': url.username or '',
+                'PASSWORD': url.password or '',
+                'HOST': url.hostname or '',
+                'PORT': url.port or '',
+            }
+        }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': os.environ.get('DB_ENGINE', 'django.db.backends.sqlite3'),
+            'NAME': os.environ.get('DB_NAME', BASE_DIR / 'db.sqlite3'),
+            'USER': os.environ.get('DB_USER', ''),
+            'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+            'HOST': os.environ.get('DB_HOST', ''),
+            'PORT': os.environ.get('DB_PORT', ''),
+        }
     }
-}
 
 
 # Custom User Model

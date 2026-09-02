@@ -9,7 +9,8 @@ from .views import (
     RegisterView, LoginView, MeView,
     AccountViewSet, CategoryViewSet, TransactionViewSet,
     BudgetViewSet, GoalViewSet, RecurringTransactionViewSet,
-    MonthlyPlanViewSet, export_csv, export_pdf, HouseholdViewSet
+    MonthlyPlanViewSet, export_csv, export_pdf, HouseholdViewSet,
+    ProjectViewSet, ProjectMilestoneViewSet,
 )
 from .ai_views import ai_chat, scan_receipt
 from .analytics_views import budget_forecast, detect_subscriptions
@@ -24,6 +25,8 @@ router.register(r'goals', GoalViewSet, basename='goal')
 router.register(r'recurring-transactions', RecurringTransactionViewSet, basename='recurring-transaction')
 router.register(r'monthly-plans', MonthlyPlanViewSet, basename='monthly-plan')
 router.register(r'households', HouseholdViewSet, basename='household')
+router.register(r'projects', ProjectViewSet, basename='project')
+router.register(r'project-milestones', ProjectMilestoneViewSet, basename='project-milestone')
 
 urlpatterns = [
     # Auth

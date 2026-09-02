@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../services/ai_service.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/account_provider.dart';
+import '../../providers/transaction_provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 
@@ -111,13 +115,51 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> with TickerProvid
     });
   }
 
-  void _confirmTransaction(Map<String, dynamic> data) {
-    // Add logic to save the transaction to the database
-    // via TransactionProvider or API
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Transaction ajoutée avec succès !')),
-    );
-    Navigator.pop(context); // Optional: close assistant or just show success
+  void _confirmTransaction(Map<String, dynamic> data) async {
+    try {
+      final user = context.read<AuthProvider>().currentUser;
+      final userId = user?.id ?? 'guest';
+      
+      final accountProvider = context.read<AccountProvider>();
+      String accountId = accountProvider.accounts.isNotEmpty 
+          ? accountProvider.accounts.first.id 
+          : '';
+
+      final amount = double.tryParse(data['amount']?.toString() ?? '0') ?? 0.0;
+      final type = data['type']?.toString() ?? 'expense';
+      final categoryId = data['category_id']?.toString() ?? 'cat_food';
+      final description = data['description']?.toString() ?? data['merchant']?.toString() ?? 'Achat via IA';
+      final dateStr = data['date']?.toString();
+      final txDate = dateStr != null ? (DateTime.tryParse(dateStr) ?? DateTime.now()) : DateTime.now();
+
+      await context.read<TransactionProvider>().addTransaction(
+        userId: userId,
+        amount: amount,
+        type: type,
+        categoryId: categoryId,
+        accountId: accountId,
+        description: description,
+        date: txDate,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Transaction ajoutée avec succès !'),
+            backgroundColor: AppTheme.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors de l\'ajout: $e'),
+            backgroundColor: AppTheme.error,
+          ),
+        );
+      }
+    }
   }
 
   @override

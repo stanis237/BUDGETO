@@ -70,38 +70,83 @@ def ai_chat(request):
     }}
     """
 
-    try:
-        completion = client.chat.completions.create(
-            model="gpt-4o",  # or gpt-3.5-turbo
-            response_format={ "type": "json_object" },
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_text}
-            ]
-        )
-        
-        response_json = json.loads(completion.choices[0].message.content)
-        intent = response_json.get('intent')
-        data = response_json.get('data', {})
+    api_key = os.environ.get("OPENAI_API_KEY", "")
+    use_openai = bool(api_key and api_key != "votre_cle_api_openai_ici")
 
-        if intent == 'add_transaction':
-            # Optionally, we can save it directly or just return it to the frontend for confirmation.
-            # Let's return it so the frontend can show a beautiful confirmation UI.
-            return Response({
-                'action': 'confirm_transaction',
-                'transaction_data': data,
-                'message': f"J'ai préparé une transaction de {data.get('amount')}€ pour {data.get('description')}. Souhaitez-vous la valider ?"
-            })
-        elif intent == 'query':
-            return Response({
-                'action': 'chat_response',
-                'message': data.get('answer', "Désolé, je n'ai pas pu analyser votre demande.")
-            })
-        else:
-            return Response({'action': 'chat_response', 'message': "Je ne suis pas sûr de comprendre."})
+    if use_openai:
+        try:
+            completion = client.chat.completions.create(
+                model="gpt-4o",
+                response_format={ "type": "json_object" },
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_text}
+                ]
+            )
+            response_json = json.loads(completion.choices[0].message.content)
+            intent = response_json.get('intent')
+            data = response_json.get('data', {})
 
-    except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            if intent == 'add_transaction':
+                return Response({
+                    'action': 'confirm_transaction',
+                    'transaction_data': data,
+                    'message': f"J'ai préparé une transaction de {data.get('amount')}€ pour {data.get('description', 'Achat')}. Souhaitez-vous la valider ?"
+                })
+            elif intent == 'query':
+                return Response({
+                    'action': 'chat_response',
+                    'message': data.get('answer', "Désolé, je n'ai pas pu analyser votre demande.")
+                })
+            else:
+                return Response({'action': 'chat_response', 'message': "Je ne suis pas sûr de comprendre."})
+
+        except Exception:
+            use_openai = False
+
+    # Fallback smart parser (when OpenAI API Key is absent or encounters error)
+    import re
+    amount_match = re.search(r'(\d+[\.,]?\d*)', user_text)
+    amount = float(amount_match.group(1).replace(',', '.')) if amount_match else None
+
+    # Detect transaction intent if amount is present
+    if amount and amount > 0:
+        lower_text = user_text.lower()
+        is_income = any(w in lower_text for w in ['reçu', 'recu', 'gagné', 'gagne', 'salaire', 'virement', 'revenu'])
+        tx_type = 'income' if is_income else 'expense'
+
+        # Infer category
+        cat_id = 'cat_food'
+        if any(w in lower_text for w in ['resto', 'restaurant', 'café', 'starbucks', 'manger', 'courses', 'repas', 'supermarché']):
+            cat_id = 'cat_food'
+        elif any(w in lower_text for w in ['essence', 'uber', 'taxi', 'bus', 'train', 'carburant', 'transport']):
+            cat_id = 'cat_transport'
+        elif any(w in lower_text for w in ['loyer', 'électricité', 'eau', 'facture', 'maison']):
+            cat_id = 'cat_housing'
+        elif any(w in lower_text for w in ['cinéma', 'film', 'jeu', 'sport', 'loisir', 'sortie']):
+            cat_id = 'cat_entertainment'
+
+        # Infer description
+        words = [w for w in user_text.split() if not re.match(r'^\d+[\.,]?\d*€?$', w)]
+        desc = " ".join(words[:4]) if words else ("Revenu" if is_income else "Dépense")
+
+        data = {
+            'amount': amount,
+            'type': tx_type,
+            'category_id': cat_id,
+            'description': desc,
+            'date': date.today().isoformat(),
+        }
+        return Response({
+            'action': 'confirm_transaction',
+            'transaction_data': data,
+            'message': f"J'ai préparé une transaction de {amount}€ pour \"{desc}\". Souhaitez-vous la valider ?"
+        })
+    else:
+        return Response({
+            'action': 'chat_response',
+            'message': "Je suis votre assistant Stankap AI ! Pour ajouter une dépense, écrivez par exemple: 'J'ai dépensé 15€ au restaurant'."
+        })
 
 
 @api_view(['POST'])

@@ -11,6 +11,7 @@ import 'providers/goal_provider.dart';
 import 'providers/account_provider.dart';
 import 'providers/recurring_transaction_provider.dart';
 import 'providers/monthly_plan_provider.dart';
+import 'providers/project_provider.dart';
 import 'services/notification_service.dart';
 import 'services/security_service.dart';
 import 'screens/onboarding/welcome_screen.dart';
@@ -40,6 +41,7 @@ class StankapApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => GoalProvider()),
         ChangeNotifierProvider(create: (_) => RecurringTransactionProvider()),
         ChangeNotifierProvider(create: (_) => MonthlyPlanProvider()),
+        ChangeNotifierProvider(create: (_) => ProjectProvider()),
       ],
       child: MaterialApp(
         title: 'Stankap',

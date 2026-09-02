@@ -290,6 +290,104 @@ class MonthlyPlan(models.Model):
 
 
 # ----------------------------------------------------------------------------
+# PHASE 5: PROJECT PLANNING
+# ----------------------------------------------------------------------------
+
+class Project(models.Model):
+    """
+    A financial project with milestones and budget tracking.
+    Users can plan projects, set budget targets, and track progress.
+    """
+    STATUS_CHOICES = [
+        ('planning', 'Planification'),
+        ('in_progress', 'En cours'),
+        ('completed', 'Terminé'),
+        ('paused', 'En pause'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='projects')
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True, null=True)
+    target_amount = models.DecimalField(max_digits=15, decimal_places=2, default=0, validators=[MinValueValidator(0)])
+    current_amount = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='planning')
+    start_date = models.DateField()
+    end_date = models.DateField(blank=True, null=True)
+    color = models.CharField(max_length=20, default='0xFF2563EB')
+    icon = models.CharField(max_length=50, default='rocket_launch')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'projects'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.title} ({self.get_status_display()})"
+
+    @property
+    def percentage(self):
+        if self.target_amount > 0:
+            return min(float(self.current_amount) / float(self.target_amount), 1.0)
+        return 0
+
+    @property
+    def remaining(self):
+        return max(float(self.target_amount) - float(self.current_amount), 0)
+
+    @property
+    def is_completed(self):
+        return self.status == 'completed' or self.current_amount >= self.target_amount
+
+    @property
+    def milestone_count(self):
+        return self.milestones.count()
+
+    @property
+    def completed_milestones(self):
+        return self.milestones.filter(status='completed').count()
+
+
+class ProjectMilestone(models.Model):
+    """
+    A step/milestone within a project, with its own budget target.
+    """
+    STATUS_CHOICES = [
+        ('pending', 'En attente'),
+        ('in_progress', 'En cours'),
+        ('completed', 'Terminé'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='milestones')
+    title = models.CharField(max_length=200)
+    description = models.TextField(blank=True, null=True)
+    target_amount = models.DecimalField(max_digits=15, decimal_places=2, default=0, validators=[MinValueValidator(0)])
+    current_amount = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    due_date = models.DateField(blank=True, null=True)
+    order = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'project_milestones'
+        ordering = ['order', 'created_at']
+
+    def __str__(self):
+        return f"{self.title} ({self.get_status_display()})"
+
+    @property
+    def percentage(self):
+        if self.target_amount > 0:
+            return min(float(self.current_amount) / float(self.target_amount), 1.0)
+        return 0
+
+    @property
+    def is_completed(self):
+        return self.status == 'completed'
+
+
+# ----------------------------------------------------------------------------
 # PHASE 6: GAMIFICATION
 # ----------------------------------------------------------------------------
 

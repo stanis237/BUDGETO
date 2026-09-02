@@ -13,6 +13,8 @@ import '../statistics/statistics_screen.dart';
 import '../../services/analytics_service.dart';
 import '../../services/export_service.dart';
 import '../analytics/subscriptions_screen.dart';
+import '../../widgets/health_score_widget.dart';
+import '../../services/financial_health_service.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -24,6 +26,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   List<TransactionModel> _recent = [];
   bool _loadingRecent = true;
   Map<String, dynamic>? _forecast;
+  FinancialHealthResult? _healthResult;
 
   @override
   void initState() {
@@ -40,11 +43,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final now = txProvider.selectedMonth;
     final forecast = await AnalyticsService().getBudgetForecast(now.month, now.year);
 
+    // Calculate health score
+    final healthResult = await FinancialHealthService().analyze(txProvider.transactions);
+
     if (mounted) {
       setState(() { 
         _recent = data; 
         _loadingRecent = false; 
         _forecast = forecast;
+        _healthResult = healthResult;
       });
     }
   }
@@ -112,6 +119,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   // Income / Expense cards
                   _buildSummaryCards(txProvider, currency),
                   const SizedBox(height: 24),
+                  // Health Score
+                  if (_healthResult != null) ...[
+                    HealthScoreWidget(result: _healthResult!, currency: currency),
+                    const SizedBox(height: 24),
+                  ],
                   // Forecast Card (Phase 5)
                   if (_forecast != null) ...[
                     _buildForecastCard(_forecast!, currency),
@@ -175,15 +187,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ],
                   ),
                   const Spacer(),
-                  CircleAvatar(
-                    radius: 22,
-                    backgroundColor: Colors.white.withOpacity(0.2),
-                    child: Text(
-                      (auth.currentUser?.name.isNotEmpty == true)
-                          ? auth.currentUser!.name[0].toUpperCase()
-                          : 'B',
-                      style: GoogleFonts.poppins(
-                          color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.asset(
+                      'assets/images/app_icon.png',
+                      width: 44,
+                      height: 44,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) => CircleAvatar(
+                        radius: 22,
+                        backgroundColor: Colors.white.withOpacity(0.2),
+                        child: Text(
+                          (auth.currentUser?.name.isNotEmpty == true)
+                              ? auth.currentUser!.name[0].toUpperCase()
+                              : 'S',
+                          style: GoogleFonts.poppins(
+                              color: Colors.white, fontWeight: FontWeight.w700, fontSize: 16),
+                        ),
+                      ),
                     ),
                   ),
                 ],

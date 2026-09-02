@@ -4,7 +4,7 @@ Budgeto API Admin Configuration.
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
-from .models import Account, Category, Transaction, Budget, Goal, RecurringTransaction, MonthlyPlan
+from .models import Account, Category, Transaction, Budget, Goal, RecurringTransaction, MonthlyPlan, Project, ProjectMilestone
 
 User = get_user_model()
 
@@ -73,3 +73,29 @@ class MonthlyPlanAdmin(admin.ModelAdmin):
     list_display = ['user', 'month', 'year', 'needs', 'expectations']
     list_filter = ['month', 'year']
     search_fields = ['user__email']
+
+
+class ProjectMilestoneInline(admin.TabularInline):
+    model = ProjectMilestone
+    extra = 0
+    fields = ['title', 'target_amount', 'current_amount', 'status', 'due_date', 'order']
+
+
+@admin.register(Project)
+class ProjectAdmin(admin.ModelAdmin):
+    list_display = ['title', 'user', 'status', 'target_amount', 'current_amount', 'start_date', 'end_date']
+    list_filter = ['status', 'start_date']
+    search_fields = ['title', 'user__email']
+    inlines = [ProjectMilestoneInline]
+
+    def is_completed(self, obj):
+        return obj.is_completed
+    is_completed.boolean = True
+
+
+@admin.register(ProjectMilestone)
+class ProjectMilestoneAdmin(admin.ModelAdmin):
+    list_display = ['title', 'project', 'status', 'target_amount', 'current_amount', 'due_date', 'order']
+    list_filter = ['status']
+    search_fields = ['title', 'project__title']
+

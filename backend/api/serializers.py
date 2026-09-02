@@ -7,7 +7,7 @@ including nested representations and computed fields.
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
-from .models import Account, Category, Transaction, Budget, Goal, RecurringTransaction, MonthlyPlan, Household
+from .models import Account, Category, Transaction, Budget, Goal, RecurringTransaction, MonthlyPlan, Household, Project, ProjectMilestone
 
 User = get_user_model()
 
@@ -293,3 +293,67 @@ class BudgetSummarySerializer(serializers.Serializer):
     total = serializers.FloatField()
     spent = serializers.FloatField()
     remaining = serializers.FloatField()
+
+
+# ──────────────────────────────────────────────
+# Project Serializers
+# ──────────────────────────────────────────────
+
+class ProjectMilestoneSerializer(serializers.ModelSerializer):
+    """Serializer for project milestones."""
+    percentage = serializers.FloatField(read_only=True)
+    is_completed = serializers.BooleanField(read_only=True)
+
+    class Meta:
+        model = ProjectMilestone
+        fields = [
+            'id', 'project', 'title', 'description',
+            'target_amount', 'current_amount', 'status',
+            'due_date', 'order', 'created_at',
+            'percentage', 'is_completed',
+        ]
+        read_only_fields = ['id', 'created_at']
+
+
+class ProjectReadSerializer(serializers.ModelSerializer):
+    """Serializer for reading projects (includes nested milestones)."""
+    milestones = ProjectMilestoneSerializer(many=True, read_only=True)
+    percentage = serializers.FloatField(read_only=True)
+    remaining = serializers.FloatField(read_only=True)
+    is_completed = serializers.BooleanField(read_only=True)
+    milestone_count = serializers.IntegerField(read_only=True)
+    completed_milestones = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Project
+        fields = [
+            'id', 'user', 'title', 'description',
+            'target_amount', 'current_amount', 'status',
+            'start_date', 'end_date', 'color', 'icon',
+            'created_at', 'milestones',
+            'percentage', 'remaining', 'is_completed',
+            'milestone_count', 'completed_milestones',
+        ]
+
+
+class ProjectWriteSerializer(serializers.ModelSerializer):
+    """Serializer for creating/updating projects."""
+
+    class Meta:
+        model = Project
+        fields = [
+            'id', 'title', 'description',
+            'target_amount', 'current_amount', 'status',
+            'start_date', 'end_date', 'color', 'icon', 'created_at',
+        ]
+        read_only_fields = ['id', 'created_at']
+
+    def create(self, validated_data):
+        validated_data['user'] = self.context['request'].user
+        return super().create(validated_data)
+
+
+class ProjectContributionSerializer(serializers.Serializer):
+    """Serializer for adding a contribution to a project."""
+    amount = serializers.DecimalField(max_digits=15, decimal_places=2, min_value=0)
+

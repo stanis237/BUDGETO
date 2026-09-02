@@ -23,6 +23,29 @@ class FinancialHealthService {
     'cat_other_inc': 0.0,
   };
 
+  /// Convenience method to compute health from a transaction list
+  FinancialHealthResult analyze(
+    List<TransactionModel> transactions, {
+    List<BudgetModel> budgets = const [],
+    DateTime? month,
+  }) {
+    final now = month ?? DateTime.now();
+    final totalExpense = transactions
+        .where((t) => t.type == 'expense')
+        .fold(0.0, (s, t) => s + t.amount);
+    final totalIncome = transactions
+        .where((t) => t.type == 'income')
+        .fold(0.0, (s, t) => s + t.amount);
+
+    return compute(
+      totalIncome: totalIncome,
+      totalExpense: totalExpense,
+      transactions: transactions,
+      budgets: budgets,
+      month: now,
+    );
+  }
+
   /// Computes the financial health score and related metrics.
   FinancialHealthResult compute({
     required double totalIncome,

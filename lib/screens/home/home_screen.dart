@@ -13,6 +13,8 @@ import '../transactions/add_transaction_screen.dart';
 import '../../services/notification_service.dart';
 import '../../providers/monthly_plan_provider.dart';
 import '../ai_assistant/ai_assistant_screen.dart';
+import '../projects/projects_screen.dart';
+import '../../providers/project_provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -34,6 +36,7 @@ class _HomeScreenState extends State<HomeScreen> {
     await context.read<TransactionProvider>().loadAll(userId);
     context.read<BudgetProvider>().loadBudgets(userId);
     context.read<GoalProvider>().loadGoals(userId);
+    context.read<ProjectProvider>().loadProjects(userId);
     
     // Load monthly plan and schedule notification
     if (userId != 'guest' && mounted) {
@@ -95,13 +98,13 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: IndexedStack(
-        index: _currentIndex == 2 ? 0 : _currentIndex,
-        children: [
-          const DashboardScreen(),
-          const TransactionsScreen(),
-          const SizedBox(),
-          const BudgetsScreen(),
-          const ProfileScreen(),
+        index: _currentIndex <= 1 ? _currentIndex : (_currentIndex == 2 ? 0 : _currentIndex - 1),
+        children: const [
+          DashboardScreen(),
+          TransactionsScreen(),
+          ProjectsScreen(),
+          BudgetsScreen(),
+          ProfileScreen(),
         ],
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
@@ -175,8 +178,8 @@ class _HomeScreenState extends State<HomeScreen> {
               _navItem(0, Icons.home_rounded, Icons.home_outlined, 'Accueil'),
               _navItem(1, Icons.receipt_long_rounded, Icons.receipt_long_outlined, 'Transactions'),
               const SizedBox(width: 56),
-              _navItem(3, Icons.pie_chart_rounded, Icons.pie_chart_outline_rounded, 'Budgets'),
-              _navItem(4, Icons.person_rounded, Icons.person_outline_rounded, 'Profil'),
+              _navItem(3, Icons.rocket_launch_rounded, Icons.rocket_launch_outlined, 'Projets'),
+              _navItem(4, Icons.pie_chart_rounded, Icons.pie_chart_outline_rounded, 'Budgets'),
             ],
           ),
         ),
