@@ -92,7 +92,7 @@ class _HealthScoreWidgetState extends State<HealthScoreWidget>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: _scoreColor.withValues(alpha: 0.1),
+                    color: _scoreColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -235,9 +235,9 @@ class _HealthScoreWidgetState extends State<HealthScoreWidget>
       duration: const Duration(milliseconds: 300),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.primary.withValues(alpha: 0.04),
+        color: AppTheme.primary.withOpacity(0.04),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.12)),
+        border: Border.all(color: AppTheme.primary.withOpacity(0.12)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
