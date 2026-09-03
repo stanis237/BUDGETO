@@ -7,14 +7,14 @@ plugins {
 android {
     namespace = "com.budgeto.budgeto"
 
-    compileSdk = 36
+    compileSdk = 34
     ndkVersion = flutter.ndkVersion
 
-  compileOptions {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
-    isCoreLibraryDesugaringEnabled = true
-}
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+        isCoreLibraryDesugaringEnabled = true
+    }
     kotlinOptions {
         jvmTarget = JavaVersion.VERSION_11.toString()
     }
