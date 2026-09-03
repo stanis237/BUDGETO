@@ -29,18 +29,21 @@ jobs:
           channel: 'stable'
           cache: true
 
-      - name: Install Android SDK platform 35
-        run: |
-          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
-          yes | "$SDKMANAGER" --licenses || true
-          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0"
-
       - name: Get dependencies
         run: flutter pub get
 
-      - name: Adjust Gradle memory for CI
+      - name: Clean build
+        run: flutter clean
+
+      - name: Adjust Gradle settings for CI
         run: |
-          sed -i 's/org.gradle.jvmargs=-Xmx8G/org.gradle.jvmargs=-Xmx2G/g' android/gradle.properties
+          # Reduce memory to avoid OOM on GitHub Runners
+          if [ -f android/gradle.properties ]; then
+            sed -i 's/org.gradle.jvmargs=-Xmx8G/org.gradle.jvmargs=-Xmx2G/g' android/gradle.properties
+          fi
+          # Ensure local.properties exists for settings.gradle.kts
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
+          echo "flutter.sdk=$FLUTTER_ROOT" >> android/local.properties
 
       - name: Make gradlew executable
         run: chmod +x android/gradlew

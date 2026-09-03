@@ -111,7 +111,7 @@ class AppTheme {
         labelStyle: GoogleFonts.outfit(color: textSecondary, fontSize: 14),
         hintStyle: GoogleFonts.outfit(color: textHint, fontSize: 14),
       ),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: surface,
         elevation: 0,
         shape: RoundedRectangleBorder(
