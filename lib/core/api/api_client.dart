@@ -10,9 +10,8 @@ class ApiClient {
   late Dio dio;
   final _storage = const FlutterSecureStorage();
   
-  // Replace with your local IP if testing on physical device, or use emulator default
-  final String baseUrl = kIsWeb ? 'http://localhost:8000/api' : 
-                         (Platform.isAndroid ? 'http://10.0.2.2:8000/api' : 'http://localhost:8000/api');
+  // Base URL for the Django production backend
+  final String baseUrl = 'https://stankap.pythonanywhere.com/api';
 
   ApiClient._internal() {
     dio = Dio(BaseOptions(
