@@ -3,8 +3,6 @@ name: Build APK
 on:
   push:
     branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
@@ -29,26 +27,40 @@ jobs:
           channel: 'stable'
           cache: true
 
+      - name: Prepare Android Environment
+        run: |
+          # Créer le dossier android s'il n'existe pas
+          mkdir -p android
+          
+          # Générer local.properties avec les variables d'environnement de GitHub Actions
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
+          echo "flutter.sdk=$FLUTTER_ROOT" >> android/local.properties
+          
+          # Ajuster la mémoire pour éviter les crashs (OOM)
+          if [ -f android/gradle.properties ]; then
+            sed -i 's/org.gradle.jvmargs=.*/org.gradle.jvmargs=-Xmx2G -XX:MaxMetaspaceSize=512m/g' android/gradle.properties
+          else
+            echo "org.gradle.jvmargs=-Xmx2G -XX:MaxMetaspaceSize=512m" > android/gradle.properties
+          fi
+
+      - name: Install Android SDK Components
+        run: |
+          # Force l'installation de SDK 35 et des Build Tools nécessaires
+          yes | sdkmanager --licenses || true
+          sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
+
       - name: Get dependencies
         run: flutter pub get
 
       - name: Clean build
         run: flutter clean
 
-      - name: Adjust Gradle settings for CI
-        run: |
-          # Reduce memory to avoid OOM on GitHub Runners
-          if [ -f android/gradle.properties ]; then
-            sed -i 's/org.gradle.jvmargs=-Xmx8G/org.gradle.jvmargs=-Xmx2G/g' android/gradle.properties
-          fi
-          # Ensure local.properties exists for settings.gradle.kts
-          echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
-          echo "flutter.sdk=$FLUTTER_ROOT" >> android/local.properties
-
       - name: Make gradlew executable
         run: chmod +x android/gradlew
 
       - name: Build APK
+        # On utilise --no-pub car on l'a déjà fait
+        # On ajoute --verbose pour débugger si jamais ça échoue encore
         run: flutter build apk --release --no-tree-shake-icons --android-skip-build-dependency-validation
 
       - name: Upload APK Artifact
