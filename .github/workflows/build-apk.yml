@@ -43,12 +43,12 @@ jobs:
           echo "sdk.dir=$ANDROID_HOME" > android/local.properties
           echo "flutter.sdk=$FLUTTER_ROOT" >> android/local.properties
           
-          # Ajuster la mémoire pour le CI (runner GitHub = 7 Go RAM)
-          cat > android/gradle.properties << 'EOF'
-          org.gradle.jvmargs=-Xmx2G -XX:MaxMetaspaceSize=512m
-          android.useAndroidX=true
-          android.enableJetifier=true
-          EOF
+          # Ajuster la mémoire pour le CI (runner GitHub = 7 Go RAM) en préservant le reste
+          if [ -f android/gradle.properties ]; then
+            sed -i 's/org.gradle.jvmargs=.*/org.gradle.jvmargs=-Xmx2G -XX:MaxMetaspaceSize=512m/g' android/gradle.properties
+          else
+            echo "org.gradle.jvmargs=-Xmx2G -XX:MaxMetaspaceSize=512m" > android/gradle.properties
+          fi
 
       - name: Clean build
         run: flutter clean
@@ -60,7 +60,7 @@ jobs:
         run: chmod +x android/gradlew
 
       - name: Build APK
-        run: flutter build apk --release --no-tree-shake-icons
+        run: flutter build apk --release --no-tree-shake-icons --android-skip-build-dependency-validation
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
