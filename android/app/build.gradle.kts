@@ -1,12 +1,12 @@
 plugins {
     id("com.android.application")
-    id("kotlin-android")
+    id("org.jetbrains.kotlin.android")
     id("dev.flutter.flutter-gradle-plugin")
 }
 
 android {
     namespace = "com.budgeto.budgeto"
-    compileSdk = 35 // Stable version for Android 15
+    compileSdk = 36 // Matching original project setting
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -22,7 +22,7 @@ android {
         applicationId = "com.budgeto.budgeto"
         // Use flutter extension values but allow fallback
         minSdk = flutter.minSdkVersion
-        targetSdk = 35
+        targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         multiDexEnabled = true
