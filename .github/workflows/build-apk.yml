@@ -29,6 +29,11 @@ jobs:
           channel: 'stable'
           cache: true
 
+      - name: Install Android SDK 36
+        run: |
+          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME "platforms;android-36"
+          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_HOME "build-tools;36.0.0-rc1"
+
       - name: Get Flutter dependencies
         run: |
           flutter clean
@@ -39,10 +44,12 @@ jobs:
 
       - name: Build APK
         run: flutter build apk --release --no-tree-shake-icons --android-skip-build-dependency-validation
+        env:
+          FLUTTER_ROOT: ${{ env.FLUTTER_HOME }}
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: stankap-release-apk
+          name: Stankap-Release-APK
           path: build/app/outputs/flutter-apk/*.apk
         if: success()

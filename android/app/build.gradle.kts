@@ -19,7 +19,7 @@ android {
 
     defaultConfig {
         applicationId = "com.budgeto.budgeto"
-        minSdk = flutter.minSdkVersion
+        minSdk = 24 // Stable minimum for ML Kit and modern features
         targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
