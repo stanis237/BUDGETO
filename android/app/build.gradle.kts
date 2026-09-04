@@ -17,9 +17,16 @@ android {
         isCoreLibraryDesugaringEnabled = true
     }
 
+    // Modern way to configure Kotlin in AGP 9 with builtInKotlin=true
+    kotlin {
+        compilerOptions {
+            jvmTarget.set(JvmTarget.JVM_17)
+        }
+    }
+
     defaultConfig {
         applicationId = "com.budgeto.budgeto"
-        minSdk = 24 // Stable minimum for ML Kit and modern features
+        minSdk = 24
         targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -37,12 +44,6 @@ android {
     lint {
         checkReleaseBuilds = false
         abortOnError = false
-    }
-}
-
-kotlin {
-    compilerOptions {
-        jvmTarget.set(JvmTarget.JVM_17)
     }
 }
 
